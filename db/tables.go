@@ -1,76 +1,40 @@
 package db
 
-const (
-	Keyword = 1
-	Pin     = 2
-)
-
-type ImageSize struct {
-	Url    string
-	Width  int
-	Height int
+type Country struct {
+	Id          int    `json:"id"`
+	Title       string `json:"title"`
+	Cover       string `json:"cover"`
+	InvestingId int    `json:"investing_id"`
+	Currency    string `json:"currency"`
 }
-type Image struct {
-	Image            string
-	Id               int
-	Title            string
-	Description      string
-	SourceId         string
-	Link             string
-	OwnerName        string
-	OwnerUrl         string
-	BoardName        string
-	BoardUrl         string
-	BoardDescription string
-	ImageSize        string
-	CreatedTime      int64
-	CrawledTime      int64
+type EconomicCategory struct {
+	Id         int    `json:"id"`
+	Title      string `json:"title"`
+	ValueQuery string `json:"value_query"`
 }
-type ImageGif struct {
-	ImageId int
-	Url     string
-	Width   int
-	Height  int
-}
-type Topic struct {
-	Name   string
-	Id     int
-	Hidden bool
+type EventInfo struct {
+	Id          int    `json:"id"`
+	CountryId   int    `json:"country_id"`
+	InvestingId int    `json:"investing_id"`
+	Importance  int    `json:"importance"`
+	Title       string `json:"title"`
+	Actual      string `json:"actual"`
+	ForeCast    string `json:"fore_cast"`
+	Previous    string `json:"previous"`
+	Url         string `json:"url"`
+	Time        int64  `json:"time"`
 }
 
-type ImagesInTopic struct {
-	ImageId     int
-	TopicId     int
-	CrawledTime int64
+type Holiday struct {
+	Title     string `json:"title"`
+	CountryId int    `json:"country_id"`
+	Time      int64  `json:"time"`
+	AllDay    bool   `json:"all_day"`
 }
-
-type Annotation struct {
-	ImageId int
-	Data    string
-}
-
-type RelatedPin struct {
-	ImageId        int
-	RelatedImageId int
-}
-
-type SearchKeyword struct {
-	ImageId   int
-	KeywordId int
-}
-
-type SuggestedKeyword struct {
-	ImageId   int
-	KeywordId int
-}
-
-type CrawlSource struct {
-	Keyword    string
-	Status     bool
-	Loop       bool
-	FirstCrawl bool
-	TopicId    int
-	Type       int
-	ImageId    int
-	Id         int
+type EventList struct {
+	EventId    int   `json:"event_id"`
+	CategoryId int   `json:"category_id"`
+	CountryId  int   `json:"country_id"`
+	Importance int   `json:"importance"`
+	EventTime  int64 `json:"event_time"`
 }

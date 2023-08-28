@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/go-pg/pg/v10"
 	"go-pinterest/config"
+	"go-pinterest/date"
+	"strconv"
 )
 
 var mysqlDb *pg.DB
@@ -24,90 +26,95 @@ func GetDb() *pg.DB {
 	return mysqlDb
 }
 
-func GetCrawlSource() ([]CrawlSource, error) {
-	listCrawl := make([]CrawlSource, 0)
-	err := mysqlDb.Model((*CrawlSource)(nil)).Column("*").Order("id DESC").ForEach(
-		func(c *CrawlSource) error {
-			if !c.Status {
-				return nil
-			}
-			if c.Loop {
-				listCrawl = append(listCrawl, *c)
-				return nil
-			}
-			if !c.FirstCrawl {
-				listCrawl = append(listCrawl, *c)
-				return nil
-			}
+func GetAllCountries() ([]Country, error) {
+	countries := make([]Country, 0)
+	err := mysqlDb.Model((*Country)(nil)).Column("*").Order("id DESC").ForEach(
+		func(c *Country) error {
+			countries = append(countries, *c)
 			return nil
 		})
 
-	return listCrawl, err
+	return countries, err
 }
 
-func UpdateImageIdInCrawlSource(c CrawlSource) error {
-	_, err := mysqlDb.Model(&c).WherePK().Column("image_id").Update()
-	return err
-}
-func GetImageId(sourceId string) (int, error) {
-	imageInfo := Image{Id: 0, SourceId: sourceId}
-	err := mysqlDb.Model(&imageInfo).Where("\"image\".\"source_id\"=?", imageInfo.SourceId).Select()
-	return imageInfo.Id, err
+func GetAllCategories() ([]EconomicCategory, error) {
+	categories := make([]EconomicCategory, 0)
+	err := mysqlDb.Model((*EconomicCategory)(nil)).Column("*").Order("id DESC").ForEach(
+		func(c *EconomicCategory) error {
+			categories = append(categories, *c)
+			return nil
+		})
+
+	return categories, err
 }
 
-func GetImageInfo(imageId int) (Image, error) {
-	imageInfo := Image{Id: imageId}
-	err := mysqlDb.Model(&imageInfo).WherePK().Select()
-	return imageInfo, err
+func GetEventIdByInvestingId(investingId int) (EventInfo, error) {
+	info := EventInfo{Id: 0, InvestingId: investingId}
+	err := mysqlDb.Model(&info).Where("\"investing_id\"=?", info.InvestingId).Select()
+	return info, err
 }
 
-func InsertImageInfo(info Image) (Image, error) {
+func GetEventInfoById(Id int) (EventInfo, error) {
+	info := EventInfo{Id: Id}
+	err := mysqlDb.Model(&info).WherePK().Select()
+	return info, err
+}
+
+func InsertEventInfo(info EventInfo) (EventInfo, error) {
 	_, err := mysqlDb.Model(&info).Insert()
 	return info, err
 }
 
-func UpdateImageInfo(info Image) error {
-	_, err := mysqlDb.Model(&info).WherePK().Column("title", "description", "owner_name", "owner_url", "board_description").Update()
-	return err
+func UpdateCurrency(countryId int ,curr string) (Country, error) {
+	country:=Country{Id: countryId,Currency: curr}
+	_, err := mysqlDb.Model(&country).WherePK().Column("currency").Update()
+	return country,err
 }
 
-func InsertAnnotationImage(info Annotation) error {
+func InsertEventToList(info EventList) (EventList, error) {
 	_, err := mysqlDb.Model(&info).Insert()
-	return err
+	return info, err
+}
+func InsertHoliday(info Holiday) (Holiday, error) {
+	_, err := mysqlDb.Model(&info).Insert()
+	return info, err
 }
 
-func InsertImageToTopic(imageTopic ImagesInTopic) error {
-	_, err := mysqlDb.Model(&imageTopic).Insert()
-	return err
+
+func GetAllHolidays(date int64) ([]Holiday, error) {
+	data := make([]Holiday, 0)
+	err := mysqlDb.Model((*Holiday)(nil)).Column("*").Where("time = ?",date).Order("time DESC").ForEach(
+		func(c *Holiday) error {
+			data = append(data, *c)
+			return nil
+		})
+
+	return data, err
 }
 
-func InsertImageToSearchKeyword(searchInfo SearchKeyword) error {
-	_, err := mysqlDb.Model(&searchInfo).Insert()
-	return err
-}
+func GetEventList(countries []int,categories []int, day int64) ([]EventList, error) {
+	WhereCondition := "event_time >= " + strconv.FormatInt(day,10) +" AND event_time < " + strconv.FormatInt(day+date.SECOND_PER_DAY,10)
 
-func InsertRelatedPinsImageInfo(related RelatedPin) error {
-	_, err := mysqlDb.Model(&related).Insert()
-	return err
-}
+	if len(categories) > 0 {
+		addedQuery := " AND ( category_id = " + strconv.Itoa(categories[0])
+		for i := 1; i < len(categories); i++ {
+			addedQuery = addedQuery + " OR category_id = " + strconv.Itoa(categories[i])
+		}
+		WhereCondition = WhereCondition + addedQuery + " ) "
+	}
 
-func InsertCrawlSource(crawlSource CrawlSource) (CrawlSource, error) {
-	_, err := mysqlDb.Model(&crawlSource).Insert()
-	return crawlSource, err
-}
-
-func GetCrawlSourceInfo(keyword string) (CrawlSource, error) {
-	c := CrawlSource{Keyword: keyword}
-	err := mysqlDb.Model(&c).Where("keyword = ?", c.Keyword).Select()
-	return c, err
-}
-
-func UpdateCrawlSource(crawlSource CrawlSource) (CrawlSource, error) {
-	_, err := mysqlDb.Model(&crawlSource).WherePK().Column("status", "loop", "first_crawl", "topic_id").Update()
-	return crawlSource, err
-}
-
-func InsertSuggestedKeyword(suggestedKeyword SuggestedKeyword) error {
-	_, err := mysqlDb.Model(&suggestedKeyword).Insert()
-	return err
+	if len(countries) > 0 {
+		addedQuery := " AND ( country_id = " + strconv.Itoa(countries[0])
+		for i := 1; i < len(countries); i++ {
+			addedQuery = addedQuery + " OR country_id = " + strconv.Itoa(countries[i])
+		}
+		WhereCondition = WhereCondition + addedQuery + " ) "
+	}
+	data := []EventList{}
+	err := mysqlDb.Model().Table("event_lists").Where(WhereCondition).Order("event_time DESC").ForEach(
+		func(c *EventList) error {
+			data = append(data, *c)
+			return nil
+		})
+	return data, err
 }
